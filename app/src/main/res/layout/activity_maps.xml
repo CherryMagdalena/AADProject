@@ -22,7 +22,9 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="150dp"
         android:layout_marginTop="600dp"
-        android:onClick="updateButtonOnClick"
-        android:text="Update" />
+        android:backgroundTint="#5C16E4AA"
+        android:onClick="startButtonOnClick"
+        android:text="Start"
+        android:visibility="visible" />
 
 </FrameLayout>

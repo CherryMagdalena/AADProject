@@ -13,6 +13,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -55,6 +56,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);//will hide the title
+        getSupportActionBar().hide();
+//        mMap.setMinZoomPreference(30);
         setContentView(R.layout.activity_maps);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -82,7 +86,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             retrieveLastLocation();
         } else{
             ActivityCompat.requestPermissions(this, new String[]{
-                Manifest.permission.ACCESS_FINE_LOCATION
+                    Manifest.permission.ACCESS_FINE_LOCATION
             }, LOCATION_PERMISSION_REQUEST);
         }
 
@@ -111,12 +115,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         @Override
                         public void onSuccess(Location location) {
                             Log.d("onSuccess","retrieveLocation");
-                            setLocationLatLng(location);
-                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastLocation,35));
-                            MarkerOptions options = new MarkerOptions()
-                                    .position(lastLocation)
-                                    .title("Starting point").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
-                            mMap.addMarker(options);
+                            lastLocation = setLocationLatLng(location);
+                            moveCamera(lastLocation);
 
                         }
                     }
@@ -124,17 +124,56 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private void setLocationLatLng(Location location){
-    if (location !=null){
-        Log.d("setLocationLatLng","location not null");
-        lastLocation = new LatLng(location.getLatitude(), location.getLongitude());
-        Log.d("setLocationLatLng","finish" + lastLocation.latitude + lastLocation.longitude);
-    }
+    private LatLng setLocationLatLng(Location location){
+        if (location !=null){
+            Log.d("setLocationLatLng","location not null");
+            lastLocation = new LatLng(location.getLatitude(), location.getLongitude());
+            Log.d("setLocationLatLng","finish" + lastLocation.latitude + lastLocation.longitude);
+            return lastLocation;
+        }else{
+            Log.d("setLocationLatLng","Location null");
+            return new LatLng(0,0);
+        }
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        googleMap.getUiSettings().setScrollGesturesEnabled(false);
+        LocationListener locationListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                Log.d("onLocationChanged","Location changed!");
+                lastLocation = setLocationLatLng(location);
+                moveCamera(lastLocation);
+            }
 
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+
+            }
+        };
+
+    }
+    private void moveCamera(LatLng latLng){
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,20));
+        MarkerOptions options = new MarkerOptions()
+                .position(latLng)
+                .title("Starting point").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
+        mMap.addMarker(options);
+    }
+
+    public void startButtonOnClick(View view){
+    System.out.print("where button");
     }
 }
