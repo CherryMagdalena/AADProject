@@ -11,6 +11,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
@@ -19,8 +20,14 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -30,6 +37,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -49,7 +57,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private final long MIN_TIME = 1000;
     private final long MIN_DIST = 5;
     private static final int LOCATION_PERMISSION_REQUEST = 1;
-
+    private static final int UPDATE_INTERVAL = 10000; //10 seconds
+    private static final int FASTEST_INTERVAL = 2000; //2 seconds
     private LatLng lastLocation;
 
 
@@ -73,7 +82,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Toast.makeText(this,"Google Play Services not Available", Toast.LENGTH_LONG).show();
             }
         }
-
     }
 
     @Override
@@ -139,7 +147,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        googleMap.getUiSettings().setScrollGesturesEnabled(false);
         LocationListener locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
@@ -173,7 +180,57 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.addMarker(options);
     }
 
-    public void startButtonOnClick(View view){
-    System.out.print("where button");
+    private void trackLocation(){
+        //change comments
+        // Create the location request to start receiving updates
+        LocationRequest locationRequest = new LocationRequest();
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        locationRequest.setInterval(UPDATE_INTERVAL);
+        locationRequest.setFastestInterval(FASTEST_INTERVAL);
+
+        // Create LocationSettingsRequest object using location request
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+        builder.addLocationRequest(locationRequest);
+        LocationSettingsRequest locationSettingsRequest = builder.build();
+
+        // Check whether location settings are satisfied
+        // https://developers.google.com/android/reference/com/google/android/gms/location/SettingsClient
+        SettingsClient settingsClient = LocationServices.getSettingsClient(this);
+        settingsClient.checkLocationSettings(locationSettingsRequest);
+
+        // new Google API SDK v11 uses getFusedLocationProviderClient(this)
+        LocationServices.getFusedLocationProviderClient(this).requestLocationUpdates(locationRequest, new LocationCallback() {
+                    @Override
+                    public void onLocationResult(LocationResult locationResult) {
+                        // do work here
+                        Log.d("trackLocation","onLocationResult");
+                        retrieveLastLocation();
+                        Log.d("trackLocation","newLocation ="+lastLocation);
+
+                    }
+                },
+                Looper.myLooper());
     }
+
+    public void stopLocationTracking() {
+
+
+    }
+
+    public void startButtonOnClick(View view)
+    {trackLocation();
+
+    }
+//    @Override
+//    protected void onResume() {
+//        super.onResume();
+//        mGoogleApiClient.connect();
+//    }
+//    @Override
+//    protected void onPause() {
+//        super.onPause();
+//        if (mGoogleApiClient.isConnected()) {
+//            mGoogleApiClient.disconnect();
+//        }
+//    }
 }
