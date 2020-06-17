@@ -12,12 +12,15 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -53,11 +56,13 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.text.DecimalFormat;
 import java.util.Arrays;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.view.View.SYSTEM_UI_FLAG_FULLSCREEN;
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
+public class MapsActivity extends AppCompatActivity implements LocationListener, OnMapReadyCallback {
 
     private GoogleMap mMap;
     private DatabaseReference databaseReferences;
@@ -70,20 +75,36 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private LatLng newLocation;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private boolean isTracking = false;
-    Button trackingButton;
+    Button startButton;
+    Button pauseButton;
+    Button stopButton;
+    TextView distanceTextView;
+    TextView timerTextView;
     private LocationCallback locationCallback;
     private int totalDistance = 0; //in meters
+    private static DecimalFormat decimalFormat = new DecimalFormat("0.00");
+    long startTime = 0;
+    Handler timerHandler;
+    Runnable timerRunnable;
+    Timer timer;
+    long pauseTime;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);//will hide the title
         getSupportActionBar().hide();
+        Window w = getWindow();
+        w.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
 
 
 //        mMap.setMinZoomPreference(30);
         setContentView(R.layout.activity_maps);
-        trackingButton = findViewById(R.id.button);
+        startButton = findViewById(R.id.buttonStart);
+        pauseButton = findViewById(R.id.buttonPause);
+        stopButton = findViewById(R.id.buttonStop);
+        distanceTextView = findViewById(R.id.distanceTextView);
+        timerTextView = findViewById(R.id.timerTextView);
 
         locationCallback = new LocationCallback() {
             @Override
@@ -92,17 +113,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 if (locationResult == null) {
                     return;
-                }else{
+                } else {
                     Log.d("location callback", "onlocationresult");
-                    lastLocation=newLocation;
+                    lastLocation = newLocation;
                     newLocation = setLocationLatLng(locationResult.getLastLocation());
-                    float[] results = new float[1];
-                    Location.distanceBetween(lastLocation.latitude, lastLocation.longitude,
-                            newLocation.latitude, newLocation.longitude,
-                            results);
-                    totalDistance+=results[0];
-                    Log.d("locationCallback","total Distance = " + totalDistance);
-                    drawPolyline(lastLocation, newLocation);
+                    if (lastLocation != null){
+                        int distance = calculateDistanceBetween(lastLocation, newLocation);
+                        totalDistance += distance;
+                        Log.d("locationCallback", "total Distance = " + totalDistance);
+                        distanceTextView.setText(decimalFormat.format(totalDistance / 1000.0) + " km");
+                        drawPolyline(lastLocation, newLocation);
+                    }
                 }
             }
         };
@@ -119,34 +140,71 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
         int result = apiAvailability.isGooglePlayServicesAvailable(this);
 
-        if (result != ConnectionResult.SUCCESS){
-            if(!apiAvailability.isUserResolvableError(result)){
-                Toast.makeText(this,"Google Play Services not Available", Toast.LENGTH_LONG).show();
+        if (result != ConnectionResult.SUCCESS) {
+            if (!apiAvailability.isUserResolvableError(result)) {
+                Toast.makeText(this, "Google Play Services not Available", Toast.LENGTH_LONG).show();
             }
         }
-        LocationListener locationListener = new LocationListener() {
+        startButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onLocationChanged(Location location) {
-                Log.d("onLocationChanged","Location changed!");
-                lastLocation = setLocationLatLng(location);
-                moveCamera(lastLocation);
+            public void onClick(View v) {
+
+                mMap.clear();
+                startTime = System.currentTimeMillis();
+                timer = new Timer(startTime, timerTextView);
+                timer.startTimer();
+                trackLocation();
+                drawStartingPoint(newLocation);
+                pauseButton.setVisibility(View.VISIBLE);
+                stopButton.setVisibility(View.VISIBLE);
+                startButton.setVisibility(View.GONE);
+                isTracking = true;
+
             }
 
-            @Override
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-
-            }
+        });
+        stopButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
-            public void onProviderEnabled(String provider) {
-
+            public void onClick(View v) {
+                totalDistance = 0;
+                timer.stopTimer();
+                pauseTime = 0;
+                retrieveLastLocation();
+                drawEndPoint(newLocation);
+                stopLocationTracking();
+                pauseButton.setVisibility(View.GONE);
+                stopButton.setVisibility(View.GONE);
+                startButton.setVisibility(View.VISIBLE);
+                pauseButton.setText("Continue");
+                isTracking = false;
             }
+        });
+        pauseButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
-            public void onProviderDisabled(String provider) {
+            public void onClick(View v) {
+                //Pause
+                if (isTracking) {
+                    timer.pauseTimer();
+                    stopLocationTracking();
+
+                    pauseButton.setText("Continue");
+                    isTracking = false;
+
+                    //Continue
+                } else {
+                   Log.d("Continue", startTime +" "+ pauseTime);
+                    timer.resumeTimer();
+                    trackLocation();
+                    pauseButton.setText("Pause");
+                    isTracking = true;
+
+                }
+
 
             }
-        };
+        });
     }
 
     @Override
@@ -154,10 +212,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onStart();
         int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
 
-        if (permission == PERMISSION_GRANTED){
-            Log.d("onStart","Permission Granted");
+        if (permission == PERMISSION_GRANTED) {
+            Log.d("onStart", "Permission Granted");
             retrieveLastLocation();
-        } else{
+        } else {
             ActivityCompat.requestPermissions(this, new String[]{
                     Manifest.permission.ACCESS_FINE_LOCATION
             }, LOCATION_PERMISSION_REQUEST);
@@ -178,14 +236,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private void retrieveLastLocation(){
-        Log.d("retrieveLastLocation","start");
-         if (ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION) == PERMISSION_GRANTED){
+    private void retrieveLastLocation() {
+        Log.d("retrieveLastLocation", "start");
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PERMISSION_GRANTED) {
             fusedLocationProviderClient.getLastLocation().addOnSuccessListener(
                     new OnSuccessListener<Location>() {
                         @Override
                         public void onSuccess(Location location) {
-                            Log.d("onSuccess","retrieveLocation");
+                            Log.d("onSuccess", "retrieveLocation");
                             newLocation = setLocationLatLng(location);
                             moveCamera(newLocation);
                         }
@@ -194,15 +252,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private LatLng setLocationLatLng(Location location){
-        if (location !=null){
-            Log.d("setLocationLatLng","location not null");
+    private LatLng setLocationLatLng(Location location) {
+        if (location != null) {
+            Log.d("setLocationLatLng", "location not null");
             LatLng latLngLocation = new LatLng(location.getLatitude(), location.getLongitude());
-            Log.d("setLocationLatLng","finish" + latLngLocation.latitude + latLngLocation.longitude);
+            Log.d("setLocationLatLng", "finish" + latLngLocation.latitude + latLngLocation.longitude);
             return latLngLocation;
-        }else{
-            Log.d("setLocationLatLng","Location null");
-            return new LatLng(0,0);
+        } else {
+            Log.d("setLocationLatLng", "Location null");
+            return new LatLng(0, 0);
         }
     }
 
@@ -210,14 +268,18 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         mMap.setMyLocationEnabled(true);
+        mMap.getUiSettings().setScrollGesturesEnabled(false);
+        mMap.getUiSettings().setScrollGesturesEnabledDuringRotateOrZoom(false);
+
 
     }
-    private void moveCamera(LatLng latLng){
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,19));
+
+    private void moveCamera(LatLng latLng) {
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17));
     }
 
-    public void trackLocation(){
-        Log.d("trackLocation()","startTracking");
+    public void trackLocation() {
+        Log.d("trackLocation()", "startTracking");
         //change comments
         // Create the location request to start receiving updates
         final LocationRequest locationRequest = new LocationRequest();
@@ -236,8 +298,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         settingsClient.checkLocationSettings(locationSettingsRequest);
 
         // new Google API SDK v11 uses getFusedLocationProviderClient(this)
-        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback,Looper.myLooper());
-
+        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
 
 
     }
@@ -247,14 +308,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         voidTask.addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
             public void onComplete(@NonNull Task<Void> task) {
-                Log.d("stopLocationTracking()", "addOnCompleteListener: "+task.isComplete());
+                Log.d("stopLocationTracking()", "addOnCompleteListener: " + task.isComplete());
             }
         });
 
         voidTask.addOnSuccessListener(new OnSuccessListener<Void>() {
             @Override
             public void onSuccess(Void aVoid) {
-                Log.d("stopLocationTracking()", "addOnSuccessListener: success" );
+                Log.d("stopLocationTracking()", "addOnSuccessListener: success");
+                lastLocation= null;
             }
         });
 
@@ -268,34 +330,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
     public void startButtonOnClick(View view) {
-        final Button testButton = findViewById(R.id.button);
-
-        testButton.setOnClickListener( new View.OnClickListener() {
-            @Override
-            public void onClick (View v) {
-                if(isTracking == true) {
-                    drawEndPoint(newLocation);
-                   stopLocationTracking();
-                    trackingButton.setText("Start");
-                    isTracking=false;
-
-                } else {
-                    mMap.clear();
-                    trackLocation();
-                   drawStartingPoint(newLocation);
-                   trackingButton.setText("Stop");
-                   isTracking=true;
-                }
-            }
-        });
-
-
+//        final Button testButton = findViewById(R.id.button);
     }
 
-    public void drawPolyline(LatLng latLng1, LatLng latLng2){
+    public void drawPolyline(LatLng latLng1, LatLng latLng2) {
 
         Polyline polyline = mMap.addPolyline(new PolylineOptions()
-                .add(latLng1,latLng2)
+                .add(latLng1, latLng2)
         );
 
         polyline.setEndCap(new RoundCap());
@@ -304,19 +345,54 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         polyline.setJointType(JointType.DEFAULT);
     }
 
-    public void drawStartingPoint(LatLng startingPoint){
+    public void drawStartingPoint(LatLng startingPoint) {
         MarkerOptions options = new MarkerOptions()
                 .position(startingPoint)
                 .title("Starting point").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
         mMap.addMarker(options);
         moveCamera(newLocation);
     }
-    public void drawEndPoint(LatLng endPoint){
+
+    public void drawEndPoint(LatLng endPoint) {
         MarkerOptions options = new MarkerOptions()
                 .position(endPoint)
                 .title("End point").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
         mMap.addMarker(options);
         moveCamera(newLocation);
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+
+        Log.d("onLocationChanged", "Location changed!");
+        lastLocation = setLocationLatLng(location);
+        moveCamera(lastLocation);
+
+
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+
+    }
+
+    public int calculateDistanceBetween(LatLng lastLocation, LatLng newLocation){
+        float[] results = new float[1];
+        Location.distanceBetween(lastLocation.latitude, lastLocation.longitude,
+                newLocation.latitude, newLocation.longitude,
+                results);
+        int distance =(int) results[0];
+        return distance;
     }
 
 }
