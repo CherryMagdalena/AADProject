@@ -1,6 +1,7 @@
 package com.example.aadproject;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -11,6 +12,7 @@ import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -56,7 +58,10 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
+import java.time.LocalDate;
 import java.util.Arrays;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
@@ -83,11 +88,15 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
     private LocationCallback locationCallback;
     private int totalDistance = 0; //in meters
     private static DecimalFormat decimalFormat = new DecimalFormat("0.00");
-    long startTime = 0;
+    long startTimeMillis = 0;
     Handler timerHandler;
     Runnable timerRunnable;
     Timer timer;
-    long pauseTime;
+    DatabaseHelper databaseHelper;
+    String startTime;
+    String startDate;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,7 +105,7 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
         getSupportActionBar().hide();
         Window w = getWindow();
         w.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
-
+        databaseHelper = new DatabaseHelper(this);
 
 //        mMap.setMinZoomPreference(30);
         setContentView(R.layout.activity_maps);
@@ -117,13 +126,16 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
                     Log.d("location callback", "onlocationresult");
                     lastLocation = newLocation;
                     newLocation = setLocationLatLng(locationResult.getLastLocation());
-                    if (lastLocation != null){
-                        int distance = calculateDistanceBetween(lastLocation, newLocation);
-                        totalDistance += distance;
-                        Log.d("locationCallback", "total Distance = " + totalDistance);
-                        distanceTextView.setText(decimalFormat.format(totalDistance / 1000.0) + " km");
-                        drawPolyline(lastLocation, newLocation);
+                    if (isTracking){
+                        if (lastLocation != null){
+                            int distance = calculateDistanceBetween(lastLocation, newLocation);
+                            totalDistance += distance;
+                            Log.d("locationCallback", "total Distance = " + totalDistance);
+                            distanceTextView.setText(decimalFormat.format(totalDistance / 1000.0) + " km");
+                            drawPolyline(lastLocation, newLocation);
+                        }
                     }
+
                 }
             }
         };
@@ -146,15 +158,21 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
             }
         }
         startButton.setOnClickListener(new View.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.O)
             @Override
             public void onClick(View v) {
 
                 mMap.clear();
-                startTime = System.currentTimeMillis();
-                timer = new Timer(startTime, timerTextView);
+                startTime = getCurrentTime();
+                startDate = getCurrentDate();
+
+                startTimeMillis = System.currentTimeMillis();
+                timer = new Timer(startTimeMillis, timerTextView);
                 timer.startTimer();
+
                 trackLocation();
                 drawStartingPoint(newLocation);
+                pauseButton.setText("Pause");
                 pauseButton.setVisibility(View.VISIBLE);
                 stopButton.setVisibility(View.VISIBLE);
                 startButton.setVisibility(View.GONE);
@@ -165,11 +183,11 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
         });
         stopButton.setOnClickListener(new View.OnClickListener() {
 
+            @RequiresApi(api = Build.VERSION_CODES.O)
             @Override
             public void onClick(View v) {
                 totalDistance = 0;
                 timer.stopTimer();
-                pauseTime = 0;
                 retrieveLastLocation();
                 drawEndPoint(newLocation);
                 stopLocationTracking();
@@ -177,6 +195,9 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
                 stopButton.setVisibility(View.GONE);
                 startButton.setVisibility(View.VISIBLE);
                 pauseButton.setText("Continue");
+
+                saveToDatabase();
+
                 isTracking = false;
             }
         });
@@ -194,14 +215,13 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
 
                     //Continue
                 } else {
-                   Log.d("Continue", startTime +" "+ pauseTime);
                     timer.resumeTimer();
+                    retrieveLastLocation();
                     trackLocation();
                     pauseButton.setText("Pause");
                     isTracking = true;
 
                 }
-
 
             }
         });
@@ -275,7 +295,7 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
     }
 
     private void moveCamera(LatLng latLng) {
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15));
     }
 
     public void trackLocation() {
@@ -394,5 +414,35 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
         int distance =(int) results[0];
         return distance;
     }
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public String getCurrentDate(){
+        String currentDate = java.time.LocalDate.now().toString();
+        return currentDate;
 
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public String getCurrentTime(){
+        String currentTime = java.time.LocalTime.now().toString();
+        currentTime = currentTime.substring(0,5);
+        return currentTime;
+    }
+
+    public double getDistance(){
+        String distanceString =distanceTextView.getText().toString();
+        distanceString = distanceString.substring(0, distanceString.length()-2);
+        double distance = Double.parseDouble(distanceString);
+        BigDecimal bigDecimal = new BigDecimal(distance).setScale(2, RoundingMode.HALF_UP);
+        distance = bigDecimal.doubleValue();
+        return distance;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public void saveToDatabase(){
+            String duration = timerTextView.getText().toString();
+            double distance = getDistance();
+
+            databaseHelper.addJoggingSession(new JoggingSession(getCurrentDate(),getCurrentTime(),duration,distance));
+
+    }
 }
