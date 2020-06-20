@@ -2,17 +2,34 @@ package com.example.aadproject;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.Build;
 import android.util.Log;
+
+import androidx.annotation.RequiresApi;
+
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
+import java.time.format.TextStyle;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Locale;
+
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String DATABASE_NAME = "JoggingApp.db";
-    public static final String TABLE_NAME = "UserJoggingDatabase";
+    public static final String TABLE_NAME = "JoggingSessionTable";
 
     public DatabaseHelper(Context context){
         super(context, DATABASE_NAME, null, 1);
-//        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase db = this.getReadableDatabase();
     }
 
     @Override
@@ -44,5 +61,57 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         sqLiteDatabase.close();
 
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public ArrayList<HashMap<String, String>> getAllJoggingSessions(){
+        SQLiteDatabase database = this.getWritableDatabase();
+        ArrayList<HashMap<String,String>> sessionList = new ArrayList<>();
+        Cursor cursor = database.rawQuery("select * from " + TABLE_NAME, null);
+
+        ArrayList<String> sessionLists = new ArrayList<>();
+        Log.d("getJogginSessions" , "Retrieving from database");
+        while(cursor.moveToNext()){
+            HashMap<String,String> sessionInfo =  new HashMap<>();
+            String date = cursor.getString(cursor.getColumnIndex("DATE"));
+            date = dateToString(date);
+            sessionInfo.put("date", date);
+
+            sessionInfo.put("time", cursor.getString(cursor.getColumnIndex("TIME")));
+            sessionInfo.put("duration", cursor.getString(cursor.getColumnIndex("DURATION")));
+
+            Double distance =  cursor.getDouble(cursor.getColumnIndex("DISTANCE"));
+            String distanceString = distanceToString(distance);
+            sessionInfo.put("distance", distanceString);
+
+            sessionList.add(sessionInfo);
+
+        }
+        return sessionList;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public String dateToString(String dateString){
+        Log.d("dateToString","Start" + dateString);
+        String date = dateString.substring(8,10);
+        String month = dateString.substring(5,7);
+        String year = dateString.substring(0,4);
+        String newDateString = date + "-" + month + "-" + year;
+
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        LocalDate newDate= LocalDate.parse(newDateString, formatter);
+//
+//        DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).format(newDate);
+        DateTimeFormatter dayDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy");
+        String dayDateString = dayDateFormatter.format(newDate);
+
+        return dayDateString;
+    }
+
+    public String distanceToString(Double distance){
+        String newDistance = distance +" km";
+        Log.d("distanceToString", "newDistance: "  + newDistance);
+        return newDistance;
     }
 }

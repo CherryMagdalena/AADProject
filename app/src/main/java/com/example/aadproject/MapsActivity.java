@@ -7,6 +7,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
@@ -22,6 +23,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -52,6 +54,8 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.android.material.bottomappbar.BottomAppBar;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -63,6 +67,7 @@ import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.zip.Inflater;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.view.View.SYSTEM_UI_FLAG_FULLSCREEN;
@@ -79,10 +84,11 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
     private LatLng lastLocation;
     private LatLng newLocation;
     private FusedLocationProviderClient fusedLocationProviderClient;
-    private boolean isTracking = false;
-    Button startButton;
-    Button pauseButton;
-    Button stopButton;
+    FloatingActionButton startButton;
+    boolean isTracking = false;
+    boolean isOnPause = false;
+    ImageButton stopButton;
+    ImageButton historyButton;
     TextView distanceTextView;
     TextView timerTextView;
     private LocationCallback locationCallback;
@@ -101,19 +107,23 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestPermission();
         requestWindowFeature(Window.FEATURE_NO_TITLE);//will hide the title
         getSupportActionBar().hide();
         Window w = getWindow();
         w.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+
+
         databaseHelper = new DatabaseHelper(this);
 
-//        mMap.setMinZoomPreference(30);
         setContentView(R.layout.activity_maps);
-        startButton = findViewById(R.id.buttonStart);
-        pauseButton = findViewById(R.id.buttonPause);
+        startButton = findViewById(R.id.floatingActionButton);
         stopButton = findViewById(R.id.buttonStop);
         distanceTextView = findViewById(R.id.distanceTextView);
         timerTextView = findViewById(R.id.timerTextView);
+        historyButton = findViewById(R.id.historyImageButton);
+        startButton.setImageResource(R.drawable.run_icon);
+        stopButton.setImageResource(R.drawable.stop_icon);
 
         locationCallback = new LocationCallback() {
             @Override
@@ -121,11 +131,15 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
 
 
                 if (locationResult == null) {
+                    Log.d("locationCallback", "locationResult null");
                     return;
+
                 } else {
                     Log.d("location callback", "onlocationresult");
                     lastLocation = newLocation;
                     newLocation = setLocationLatLng(locationResult.getLastLocation());
+                    moveCamera(newLocation);
+
                     if (isTracking){
                         if (lastLocation != null){
                             int distance = calculateDistanceBetween(lastLocation, newLocation);
@@ -162,22 +176,39 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
             @Override
             public void onClick(View v) {
 
-                mMap.clear();
-                startTime = getCurrentTime();
-                startDate = getCurrentDate();
+                if (isTracking){ //pause
+                    timer.pauseTimer();
+                    stopLocationTracking();
+                    startButton.setImageResource(R.drawable.play_icon);
+                    isTracking = false;
+                    isOnPause = true;
 
-                startTimeMillis = System.currentTimeMillis();
-                timer = new Timer(startTimeMillis, timerTextView);
-                timer.startTimer();
+                } else{
+                    if (isOnPause){//resume
+                        timer.resumeTimer();
+                        retrieveLastLocation();
+                        trackLocation();
+                        startButton.setImageResource(R.drawable.pause_icon);
+                        isTracking = true;
+                        isOnPause = false;
+                    } else{ //startTracking
+                        mMap.clear();
+                        startTime = getCurrentTime();
+                        startDate = getCurrentDate();
 
-                trackLocation();
-                drawStartingPoint(newLocation);
-                pauseButton.setText("Pause");
-                pauseButton.setVisibility(View.VISIBLE);
-                stopButton.setVisibility(View.VISIBLE);
-                startButton.setVisibility(View.GONE);
-                isTracking = true;
+                        startTimeMillis = System.currentTimeMillis();
+                        timer = new Timer(startTimeMillis, timerTextView);
+                        timer.startTimer();
 
+                        retrieveLastLocation();
+                        trackLocation();
+                        drawStartingPoint(newLocation);
+
+                        stopButton.setVisibility(View.VISIBLE);
+                        startButton.setImageResource(R.drawable.pause_icon);
+                        isTracking = true;
+                    }
+                }
             }
 
         });
@@ -191,57 +222,25 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
                 retrieveLastLocation();
                 drawEndPoint(newLocation);
                 stopLocationTracking();
-                pauseButton.setVisibility(View.GONE);
                 stopButton.setVisibility(View.GONE);
-                startButton.setVisibility(View.VISIBLE);
-                pauseButton.setText("Continue");
-
                 saveToDatabase();
-
                 isTracking = false;
+                isOnPause = false;
+                startButton.setImageResource(R.drawable.run_icon);
             }
         });
-        pauseButton.setOnClickListener(new View.OnClickListener() {
+
+
+        historyButton.setOnClickListener(new View.OnClickListener(){
 
             @Override
             public void onClick(View v) {
-                //Pause
-                if (isTracking) {
-                    timer.pauseTimer();
-                    stopLocationTracking();
-
-                    pauseButton.setText("Continue");
-                    isTracking = false;
-
-                    //Continue
-                } else {
-                    timer.resumeTimer();
-                    retrieveLastLocation();
-                    trackLocation();
-                    pauseButton.setText("Pause");
-                    isTracking = true;
-
-                }
-
+                startActivity(new Intent(MapsActivity.this,HistoryActivity.class ));
             }
         });
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
 
-        if (permission == PERMISSION_GRANTED) {
-            Log.d("onStart", "Permission Granted");
-            retrieveLastLocation();
-        } else {
-            ActivityCompat.requestPermissions(this, new String[]{
-                    Manifest.permission.ACCESS_FINE_LOCATION
-            }, LOCATION_PERMISSION_REQUEST);
-        }
-
-    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -288,10 +287,8 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         mMap.setMyLocationEnabled(true);
-        mMap.getUiSettings().setScrollGesturesEnabled(false);
-        mMap.getUiSettings().setScrollGesturesEnabledDuringRotateOrZoom(false);
-
-
+        mMap.getUiSettings().setAllGesturesEnabled(false);
+        retrieveLastLocation();
     }
 
     private void moveCamera(LatLng latLng) {
@@ -348,11 +345,6 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
         });
     }
 
-
-    public void startButtonOnClick(View view) {
-//        final Button testButton = findViewById(R.id.button);
-    }
-
     public void drawPolyline(LatLng latLng1, LatLng latLng2) {
 
         Polyline polyline = mMap.addPolyline(new PolylineOptions()
@@ -387,18 +379,14 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
         Log.d("onLocationChanged", "Location changed!");
         lastLocation = setLocationLatLng(location);
         moveCamera(lastLocation);
-
-
     }
 
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
-
     }
 
     @Override
     public void onProviderEnabled(String provider) {
-
     }
 
     @Override
@@ -440,9 +428,44 @@ public class MapsActivity extends AppCompatActivity implements LocationListener,
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void saveToDatabase(){
             String duration = timerTextView.getText().toString();
+            duration = durationToString(duration);
             double distance = getDistance();
 
             databaseHelper.addJoggingSession(new JoggingSession(getCurrentDate(),getCurrentTime(),duration,distance));
 
     }
+    public String durationToString(String duration){
+        Log.d("durationToString","Start");
+        String minutes = duration.substring(0,1);
+        String second = duration.substring(3,4);
+        String newDurationString;
+        int minutesInInt = Integer.parseInt(minutes);
+        if (minutesInInt > 60){
+            String hour = String.valueOf(minutesInInt/60);
+            minutes = String.valueOf(minutesInInt%60);
+            newDurationString = hour + " hours " + minutes + " minutes " + second + " seconds";
+            Log.d("durationToString", newDurationString);
+            return newDurationString;
+        }
+        else{
+            newDurationString = minutes + " minutes " + second + " seconds";
+            Log.d("durationToString", newDurationString);
+            return newDurationString;
+
+        }
+
+    }
+
+    public void requestPermission(){
+        int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
+
+        if (permission == PERMISSION_GRANTED) {
+            Log.d("requestPermission", "Permission Granted");
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION
+            }, LOCATION_PERMISSION_REQUEST);
+        }
+    }
+
 }
