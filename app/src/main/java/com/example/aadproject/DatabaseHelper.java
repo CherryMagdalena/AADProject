@@ -83,7 +83,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public String dateToString(String dateString){
+    private String dateToString(String dateString){
         Log.d("dateToString","Start" + dateString);
         String date = dateString.substring(8,10);
         String month = dateString.substring(5,7);
@@ -99,7 +99,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return dayDateString;
     }
 
-    public String distanceToString(Double distance){
+    private String distanceToString(Double distance){
         String newDistance = distance +" km";
         return newDistance;
     }
