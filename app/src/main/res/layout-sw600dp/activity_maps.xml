@@ -12,7 +12,7 @@
         android:id="@+id/map"
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/map_view_height"
+        android:layout_height="@dimen/big_map_height"
         android:layout_marginBottom="@dimen/small_margin"
         app:layout_constraintBottom_toTopOf="@+id/timerTextView"
         app:layout_constraintEnd_toEndOf="parent"
@@ -21,13 +21,13 @@
         tools:context=".MapsActivity"
         tools:layout="@android:layout/simple_spinner_dropdown_item" />
 
+
     <TextView
         android:id="@+id/timerTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/small_margin"
         android:text="@string/timer_placeholder"
-        android:textSize="@dimen/timer_text_size"
+        android:textSize="@dimen/big_timer_size"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="parent"
@@ -38,30 +38,31 @@
         android:id="@+id/distanceTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/small_margin"
-        android:layout_marginTop="@dimen/small_margin"
-        android:layout_marginEnd="@dimen/distance_margin_bottom"
+        android:layout_marginStart="@dimen/distance_small_margin"
+        android:layout_marginTop="@dimen/distance_small_margin"
+        android:layout_marginEnd="@dimen/distance_big_margin"
         android:text="@string/distance_text_placeholder"
-        android:textSize="@dimen/distance_text_size"
+        android:textSize="@dimen/big_distance_size"
         app:layout_constraintEnd_toEndOf="@+id/timerTextView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/timerTextView" />
 
+
     <ImageButton
         android:id="@+id/buttonStop"
-        android:layout_width="@dimen/stop_button_side"
-        android:layout_height="@dimen/stop_button_side"
-        android:layout_marginTop="@dimen/stop_button_margin_top"
-        android:layout_marginEnd="@dimen/stop_button_margin_end"
+        android:layout_width="@dimen/big_stop_button_side"
+        android:layout_height="@dimen/big_stop_button_side"
+        android:layout_marginTop="64dp"
+        android:layout_marginEnd="16dp"
         android:background="@drawable/rounded_square"
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/timerTextView" />
+        app:layout_constraintTop_toBottomOf="@+id/map" />
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
-        android:id="@+id/coordinatorLayout3"
+        android:id="@+id/coordinatorLayout2"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/coordinator_layout_height"
+        android:layout_height="@dimen/big_coordinator_layout"
         android:layout_gravity="bottom"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent">
@@ -69,12 +70,13 @@
         <com.google.android.material.bottomappbar.BottomAppBar
             android:id="@+id/bottom_app_bar"
             android:layout_width="match_parent"
-            android:layout_height="@dimen/app_bar_height"
+            android:layout_height="@dimen/big_app_bar_height"
             android:layout_gravity="bottom"
             android:backgroundTint="@color/colorPrimary"
             android:visibility="visible"
             app:fabAlignmentMode="center"
-            app:fabAttached="true">
+            app:fabAttached="true"
+            app:fabCradleDiameter="110dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
@@ -82,22 +84,21 @@
 
                 <ImageButton
                     android:id="@+id/homeImageButton"
-                    android:layout_width="@dimen/app_bar_icon_width"
-                    android:layout_height="@dimen/app_bar_icon_height"
-                    android:layout_marginTop="@dimen/home_icon_margin"
+                    android:layout_width="@dimen/big_app_bar_icon_width"
+                    android:layout_height="@dimen/big_app_bar_icon_height"
+                    android:layout_marginTop="8dp"
                     android:backgroundTint="@android:color/transparent"
-                    android:src="@drawable/home_icon"
+                    android:src="@drawable/home_icon_big"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <ImageButton
                     android:id="@+id/historyImageButton"
-                    android:layout_width="@dimen/app_bar_icon_width"
-                    android:layout_height="@dimen/app_bar_icon_height"
-                    android:layout_marginTop="@dimen/history_icon_margin_top"
-                    android:layout_marginEnd="@dimen/history_icon_margin_end"
+                    android:layout_width="@dimen/big_app_bar_icon_width"
+                    android:layout_height="@dimen/big_app_bar_icon_height"
+                    android:layout_marginTop="10dp"
                     android:backgroundTint="@android:color/transparent"
-                    android:src="@drawable/history_icon"
+                    android:src="@drawable/history_icon_big"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
@@ -107,8 +108,8 @@
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/floatingActionButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="@dimen/big_fab_size"
+            android:layout_height="@dimen/big_fab_size"
             android:backgroundTint="@color/colorAccent"
             app:layout_anchor="@id/bottom_app_bar"
             app:rippleColor="@color/colorAccent" />

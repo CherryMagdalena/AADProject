@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="map_view_height">450dp</dimen>
+    <dimen name="small_margin">16dp</dimen>
+    <dimen name="timer_text_size">50sp</dimen>
+    <dimen name="distance_margin_bottom">100dp</dimen>
+    <dimen name="distance_text_size">35sp</dimen>
+    <dimen name="stop_button_side">50dp</dimen>
+    <dimen name="stop_button_margin_top">55dp</dimen>
+    <dimen name="stop_button_margin_end">24dp</dimen>
+    <dimen name="coordinator_layout_height">150dp</dimen>
+    <dimen name="app_bar_height">70dp</dimen>
+    <dimen name="app_bar_icon_width">150dp</dimen>
+    <dimen name="app_bar_icon_height">50dp</dimen>
+    <dimen name="home_icon_margin">8dp</dimen>
+    <dimen name="history_icon_margin_top">10dp</dimen>
+    <dimen name="history_icon_margin_end">8dp</dimen>
+    <dimen name="title_margin_top">52dp</dimen>
+    <dimen name="title_size">40sp</dimen>
+    <dimen name="list_view_height">0dp</dimen>
+    <dimen name="list_view_margin_top">24dp</dimen>
+    <dimen name="list_view_margin_bottom">70dp</dimen>
+    <dimen name="big_map_height">550dp</dimen>
+    <dimen name="big_timer_size">90sp</dimen>
+    <dimen name="distance_small_margin">8dp</dimen>
+    <dimen name="distance_big_margin">100dp</dimen>
+    <dimen name="big_distance_size">60sp</dimen>
+    <dimen name="big_stop_button_side">70dp</dimen>
+    <dimen name="big_coordinator_layout">150dp</dimen>
+    <dimen name="big_app_bar_height">90dp</dimen>
+    <dimen name="big_app_bar_icon_width">250dp</dimen>
+    <dimen name="big_app_bar_icon_height">70dp</dimen>
+    <dimen name="big_fab_size">90dp</dimen>
+</resources>

@@ -15,16 +15,8 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 
-import org.w3c.dom.Text;
-
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.Map;
 
 public class HistoryActivity extends AppCompatActivity {
 
@@ -35,6 +27,7 @@ public class HistoryActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        //make activity fullscreen
         setContentView(R.layout.activity_history);
         getSupportActionBar().hide();
         Window w = getWindow();
@@ -42,7 +35,6 @@ public class HistoryActivity extends AppCompatActivity {
 
         databaseHelper = new DatabaseHelper(this);
         setListView();
-
 
         homeButton = findViewById(R.id.homeImageButton);
         homeButton.setOnClickListener(new View.OnClickListener() {
@@ -59,7 +51,6 @@ public class HistoryActivity extends AppCompatActivity {
         Log.d("onResume","onResume Called");
         super.onResume();
         setListView();
-
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -70,19 +61,13 @@ public class HistoryActivity extends AppCompatActivity {
 
         if (sessionList.size() > 0 ){
             emptyView.setVisibility(View.GONE);
-            Log.d("sessionList length",": " + sessionList.size());
             ListAdapter adapter = new SimpleAdapter(HistoryActivity.this, sessionList,
                     R.layout.list_history, new String[]{"date","time", "duration", "distance"},
                     new int[]{R.id.dateTextView, R.id.timeTextView, R.id.durationTextView, R.id.totalDistanceTextView});
             listView.setAdapter(adapter);
         }
         else{
-
             listView.setEmptyView(emptyView);
         }
-
-
-
     }
-
 }

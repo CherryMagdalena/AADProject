@@ -10,22 +10,15 @@ import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
-import java.time.format.TextStyle;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.Locale;
-
 
 public class DatabaseHelper extends SQLiteOpenHelper {
-    public static final String DATABASE_NAME = "JoggingApp.db";
-    public static final String TABLE_NAME = "JoggingSessionTable";
+    private static final String DATABASE_NAME = "JoggingApp.db";
+    private static final String TABLE_NAME = "JoggingSessionTable";
 
     public DatabaseHelper(Context context){
         super(context, DATABASE_NAME, null, 1);
@@ -70,7 +63,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Cursor cursor = database.rawQuery("select * from " + TABLE_NAME, null);
 
         ArrayList<String> sessionLists = new ArrayList<>();
-        Log.d("getJogginSessions" , "Retrieving from database");
         while(cursor.moveToNext()){
             HashMap<String,String> sessionInfo =  new HashMap<>();
             String date = cursor.getString(cursor.getColumnIndex("DATE"));
@@ -85,8 +77,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             sessionInfo.put("distance", distanceString);
 
             sessionList.add(sessionInfo);
-
         }
+        Collections.reverse(sessionList);
         return sessionList;
     }
 
@@ -98,11 +90,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         String year = dateString.substring(0,4);
         String newDateString = date + "-" + month + "-" + year;
 
-
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
         LocalDate newDate= LocalDate.parse(newDateString, formatter);
-//
-//        DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).format(newDate);
+
         DateTimeFormatter dayDateFormatter = DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy");
         String dayDateString = dayDateFormatter.format(newDate);
 
@@ -111,7 +101,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public String distanceToString(Double distance){
         String newDistance = distance +" km";
-        Log.d("distanceToString", "newDistance: "  + newDistance);
         return newDistance;
     }
 }

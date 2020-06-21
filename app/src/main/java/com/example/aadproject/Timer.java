@@ -1,16 +1,12 @@
 package com.example.aadproject;
 
 import android.os.Handler;
-import android.util.Log;
 import android.widget.TextView;
-
-import org.w3c.dom.Text;
 
 public class Timer {
     Handler timerHandler = new Handler();
     Runnable timerRunnable;
     long startTime;
-    long currentTime;
     TextView timerTextView;
     long durationBeforePause=0;
     long pauseTime;
@@ -31,7 +27,6 @@ public class Timer {
                 seconds = seconds % 60;
 
                 timerTextView.setText(String.format("%d:%02d", minutes, seconds));
-
                 timerHandler.postDelayed(this, 500);
             }
         };
@@ -45,24 +40,12 @@ public class Timer {
         stopTimer();
         pauseTime=System.currentTimeMillis();
         durationBeforePause+=pauseTime-startTime;
-        Log.d("pauseTimer",checkTime(durationBeforePause));
     }
 
     public void resumeTimer(){
         startTime = System.currentTimeMillis();
         startTimer();
-        Log.d("resumeTimer",checkTime(startTime));
     }
 
-    public String checkTime(long millis){
-        millis = System.currentTimeMillis() - startTime;
-        int seconds = (int) (millis / 1000);
-        int minutes = seconds / 60;
-        seconds = seconds % 60;
-
-        String time = (String.format("%d:%02d", minutes, seconds));
-        return time;
-
-    }
 
 }

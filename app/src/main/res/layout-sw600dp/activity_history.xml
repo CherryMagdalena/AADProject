@@ -21,7 +21,7 @@
     <ListView
         android:id="@+id/joggingSessionsList"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/list_view_height"
+        android:layout_height="0dp"
         android:layout_marginTop="@dimen/list_view_margin_top"
         android:layout_marginBottom="@dimen/list_view_margin_bottom"
         android:divider="@null"
@@ -38,6 +38,7 @@
         android:layout_height="wrap_content"
         android:text="@string/empty_view_text"
         app:layout_constraintBottom_toBottomOf="@+id/coordinatorLayout"
+        android:textSize="25sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
@@ -46,7 +47,7 @@
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/coordinatorLayout"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/app_bar_height"
+        android:layout_height="@dimen/big_coordinator_layout"
         android:layout_gravity="bottom"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent">
@@ -54,10 +55,13 @@
         <com.google.android.material.bottomappbar.BottomAppBar
             android:id="@+id/bottom_app_bar"
             android:layout_width="match_parent"
-            android:layout_height="@dimen/app_bar_height"
+            android:layout_height="@dimen/big_app_bar_height"
             android:layout_gravity="bottom"
             android:backgroundTint="@color/colorPrimary"
-            android:visibility="visible">
+            android:visibility="visible"
+            app:fabAlignmentMode="center"
+            app:fabAttached="true"
+            app:fabCradleDiameter="110dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
@@ -65,22 +69,21 @@
 
                 <ImageButton
                     android:id="@+id/homeImageButton"
-                    android:layout_width="@dimen/app_bar_icon_width"
-                    android:layout_height="@dimen/app_bar_icon_height"
-                    android:layout_marginTop="@dimen/home_icon_margin"
+                    android:layout_width="@dimen/big_app_bar_icon_width"
+                    android:layout_height="@dimen/big_app_bar_icon_height"
+                    android:layout_marginTop="8dp"
                     android:backgroundTint="@android:color/transparent"
-                    android:src="@drawable/home_icon"
+                    android:src="@drawable/home_icon_big"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <ImageButton
                     android:id="@+id/historyImageButton"
-                    android:layout_width="@dimen/app_bar_icon_width"
-                    android:layout_height="@dimen/app_bar_icon_height"
-                    android:layout_marginTop="@dimen/history_icon_margin_top"
-                    android:layout_marginEnd="@dimen/history_icon_margin_end"
+                    android:layout_width="@dimen/big_app_bar_icon_width"
+                    android:layout_height="@dimen/big_app_bar_icon_height"
+                    android:layout_marginTop="10dp"
                     android:backgroundTint="@android:color/transparent"
-                    android:src="@drawable/history_icon"
+                    android:src="@drawable/history_icon_big"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
